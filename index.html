@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tekwan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#fde2e4; 
+      --bg2:#fff7e6; 
+      --bg3:#cfe8ff; 
+      --paper:#fffdf7;
+      --kraft:#e3c7a5; 
+      --shadow:0 18px 55px rgba(0,0,0,.25);
+      --radius:14px;
+      --vignette:rgba(0,0,0,.25);
+      --accent:#ffb3c1;
+      --accent2:#b8c0ff;
+      --accent3:#ffd6a5;
+      --text:#2b2b2b;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      color:var(--text);
+      background: radial-gradient(circle at 70% 20%, rgba(255,255,255,.6), transparent 45%),
+                  radial-gradient(circle at 20% 80%, rgba(255,255,255,.45), transparent 40%),
+                  linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+      overflow:hidden;
+      display:flex; align-items:center; justify-content:center;
+    }
+
+    body::after{
+      content:""; position:fixed; inset:0; pointer-events:none;
+      box-shadow: inset 0 0 220px var(--vignette);
+    }
+
+    .stage{
+      position:relative; width:min(900px, 80vw); height:min(95vh, 950px);
+      border-radius:24px; overflow:hidden; box-shadow: var(--shadow);
+      background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.35));
+      backdrop-filter: blur(2px);
+    }
+
+    .light-leak{
+      position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen; opacity:.0; transition:opacity .8s ease;
+      background:
+        radial-gradient(1200px 600px at -10% 110%, rgba(255,110,64,.28), transparent 60%),
+        radial-gradient(900px 500px at 110% -10%, rgba(255,0,128,.18), transparent 55%),
+        radial-gradient(600px 300px at 100% 100%, rgba(255,255,0,.12), transparent 60%);
+      animation: leakMove 14s linear infinite;
+    }
+    @keyframes leakMove{
+      0%{transform:translateX(0)} 50%{transform:translateX(-3%)} 100%{transform:translateX(0)}
+    }
+
+    .slides{position:relative; width:100%; height:100%;}
+
+    .slide{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
+      opacity:0; transform:scale(.96); transition:opacity .9s ease, transform .9s ease;
+    }
+    .slide.active{opacity:1; transform:scale(1)}
+
+    .frame{
+      position:relative; width:min(100%, 800px); height:min(80%, 450px);
+      display:flex; align-items:center; justify-content:center;
+      transform: translate(var(--offsetX,0), var(--offsetY,0)) rotate(var(--rot, 0deg));
+      transition: transform 1s ease;
+      margin-bottom: 20px;
+    }
+
+    .polaroid{
+      background: var(--paper); border-radius: 10px; padding:16px 16px 46px; box-shadow: var(--shadow);
+    }
+    .kraft{
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.06)), var(--kraft);
+      border-radius: 12px; padding:12px; box-shadow: var(--shadow);
+      outline: 2px dashed rgba(0,0,0,.12);
+    }
+    .film{
+      background: #111; padding:18px; border-radius: 8px; box-shadow: var(--shadow);
+    }
+    .film::before, .film::after{
+      content:""; position:absolute; left:14px; right:14px; height:10px; background:
+        radial-gradient(circle, #000 35%, transparent 36%) repeat-x; background-size:22px 10px;
+    }
+    .film::before{top:-6px} .film::after{bottom:-6px}
+
+    .floral{
+      padding:16px; border-radius: 12px; box-shadow: var(--shadow);
+      background:
+        repeating-linear-gradient(45deg, rgba(255,182,193,.35) 0 12px, rgba(184,193,255,.28) 12px 24px),
+        var(--paper);
+      border: 3px double rgba(0,0,0,.08);
+    }
+
+    .frame img{display:block; width:100%; height:100%; object-fit:cover; border-radius:10px}
+
+    .frame::after{
+      content:""; position:absolute; top: -18px; left:50%; transform:translateX(-50%) rotate(var(--tape-rot, -3deg));
+      width:92px; height:26px; border-radius:5px; opacity:.85; box-shadow: 0 3px 8px rgba(0,0,0,.18);
+      background: var(--tape, #ffd6a5);
+    }
+
+    .controls{position:absolute; inset:auto 14px 14px auto; display:flex; gap:8px; z-index:4}
+    .btn{appearance:none; border:0; padding:10px 14px; border-radius:999px; cursor:pointer; font-weight:600;
+      background: rgba(255,255,255,.8); box-shadow: 0 6px 16px rgba(0,0,0,.15); color:#333;
+      transition: all 0.3s ease;
+    }
+    .btn:hover{background:white; transform: scale(1.05);}
+
+    .mute-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 4;
+    }
+
+    .endcard{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
+      gap:16px; background: linear-gradient(135deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+      opacity:0; pointer-events:none; transition:opacity 1s ease;
+      backdrop-filter: blur(5px);
+    }
+    .endcard.show{opacity:1}
+    .endcard h1{margin:0; font-size:min(9vw, 48px); font-family: 'Pacifico', cursive;}
+    .endcard p{margin:0; font-size:min(4.5vw,18px); opacity:.8; font-family: 'Dancing Script', cursive;}
+
+    .t-slide-left{animation: slideLeft .9s ease both}
+    .t-slide-right{animation: slideRight .9s ease both}
+    .t-rotate-in{animation: rotateIn .9s ease both}
+    .t-flip-in{animation: flipIn .9s ease both}
+    @keyframes slideLeft{from{transform:translateX(40px) scale(.98)} to{transform:translateX(0) scale(1)}}
+    @keyframes slideRight{from{transform:translateX(-40px) scale(.98)} to{transform:translateX(0) scale(1)}}
+    @keyframes rotateIn{from{transform:rotate(-4deg) scale(.96)} to{transform:rotate(0) scale(1)}}
+    @keyframes flipIn{from{transform:rotateY(18deg) scale(.97)} to{transform:rotateY(0) scale(1)}}
+
+    .tap-hint{
+      position:fixed; 
+      bottom:30px; 
+      left:50%; 
+      transform:translateX(-50%); 
+      font-size:12px; 
+      background: rgba(255,255,255,0.7);
+      padding: 8px 16px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+
+    .tap-hint:hover {
+      transform: translateX(-50%) scale(1.05);
+    }
+
+    .photo-corner {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      z-index: 1;
+    }
+
+    .photo-corner::before {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-style: solid;
+    }
+
+    .corner-tl {
+      top: 0;
+      left: 0;
+    }
+
+    .corner-tl::before {
+      top: 0;
+      left: 0;
+      border-width: 20px 20px 0 0;
+      border-color: var(--accent) transparent transparent transparent;
+    }
+
+    .corner-tr {
+      top: 0;
+      right: 0;
+    }
+
+    .corner-tr::before {
+      top: 0;
+      right: 0;
+      border-width: 0 20px 20px 0;
+      border-color: transparent var(--accent2) transparent transparent;
+    }
+
+    .corner-bl {
+      bottom: 0;
+      left: 0;
+    }
+
+    .corner-bl::before {
+      bottom: 0;
+      left: 0;
+      border-width: 20px 0 0 20px;
+      border-color: transparent transparent transparent var(--accent3);
+    }
+
+    .corner-br {
+      bottom: 0;
+      right: 0;
+    }
+
+    .corner-br::before {
+      bottom: 0;
+      right: 0;
+      border-width: 0 0 20px 20px;
+      border-color: transparent transparent var(--accent) transparent;
+    }
+
+    .loader {
+      position: fixed;
+      inset: 0;
+      background: var(--bg1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    .loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loader-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loader" id="loader">
+    <div class="loader-spinner"></div>
+  </div>
+
+  <div class="stage">
+    <div class="light-leak" id="leak"></div>
+    <div class="slides" id="slides"></div>
+    <div class="controls">
+      <button class="btn" id="prevBtn" title="Sebelumnya">⟵</button>
+      <button class="btn" id="nextBtn" title="Berikutnya">⟶</button>
+    </div>
+    <button class="btn mute-btn" id="muteBtn" title="Mute/Unmute">🔊</button>
+    <div class="endcard" id="endcard">
+      <h1>Thank You</h1>
+      <p>For the memories we made — Take One always be The One</p>
+    </div>
+  </div>
+
+  <div class="tap-hint">Klik di mana saja untuk memulai musik</div>
+
+  <audio id="bgm" src="Tulus - Tujuh Belas.mp3" preload="auto" loop></audio>
+
+  <script>
+    const photos = [
+      "images/1.jpeg",
+      "images/2.jpg", 
+      "images/3.jpg",
+      "images/4.jpg",
+      "images/5.jpg",
+      "images/6.jpeg",
+      "images/7.jpeg", 
+      "images/8.jpeg",
+      "images/9.jpeg",
+      "images/10.jpeg",
+      "images/11.jpeg",
+      "images/12.jpg",
+      "images/13.jpeg",
+      "images/14.jpeg",
+      "images/15.jpg",
+      "images/16.jpeg",
+      "images/17.jpg",
+      "images/18.jpeg",
+      "images/19.jpg",
+      "images/20.jpg",
+      "images/21.jpg",
+      "images/22.jpg",
+      "images/23.jpg",
+      "images/24.jpeg",
+      "images/25.jpeg",
+      "images/26.jpg",
+      "images/27.jpg",
+      "images/28.jpg",
+      "images/29.jpg",
+      "images/30.jpg",
+      "images/31.jpg",
+      "images/32.jpg",
+      "images/33.jpg",
+      "images/34.jpeg",
+      "images/35.jpg",
+      "images/36.jpg",
+      "images/37.jpg",
+      "images/38.JPG",
+      "images/39.JPG",
+      "images/40.jpg",
+      "images/41.jpg",
+      "images/42.jpeg",
+    ];
+    
+    const FRAME_TYPES = ["polaroid", "kraft", "film", "floral"];
+    const TRANSITIONS = ["t-slide-left", "t-slide-right", "t-rotate-in", "t-flip-in"];
+    const TAPE_COLORS = ["#ffd6a5", "#ffc6ff", "#caffbf", "#bde0fe", "#ffadad", "#e2eafc"];
+
+    const slidesEl = document.getElementById('slides');
+    const loader = document.getElementById('loader');
+
+    let isMuted = false;
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function preloadImages() {
+      const promises = photos.map(src => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => {
+            console.log('Image loaded:', src);
+            resolve(img);
+          };
+          img.onerror = (e) => {
+            console.warn('Failed to load image:', src, e);
+            resolve(null);
+          };
+        });
+      });
+
+      Promise.all(promises).then(() => {
+        setTimeout(() => {
+          loader.classList.add('hidden');
+          createSlides();
+        }, 500);
+      });
+    }
+
+    function createSlides() {
+      photos.forEach((src, idx) => {
+        if (!src || typeof src !== 'string') {
+          console.warn('Invalid image source at index:', idx);
+          return;
+        }
+        const slide = document.createElement('div');
+        slide.className = 'slide' + (idx === 0 ? ' active' : '');
+
+        const frameWrap = document.createElement('div');
+        const frameType = pick(FRAME_TYPES);
+        frameWrap.className = `frame ${frameType}`;
+
+        frameWrap.style.setProperty('--rot', `${rand(-3, 3).toFixed(2)}deg`);
+        frameWrap.style.setProperty('--offsetX', `${rand(-22, 22).toFixed(0)}px`);
+        frameWrap.style.setProperty('--offsetY', `${rand(-14, 14).toFixed(0)}px`);
+        frameWrap.style.setProperty('--tape', pick(TAPE_COLORS));
+        frameWrap.style.setProperty('--tape-rot', `${rand(-6, 6).toFixed(2)}deg`);
+
+        frameWrap.dataset.transition = pick(TRANSITIONS);
+
+        const img = document.createElement('img');
+        img.src = src; 
+        img.alt = `Foto kenangan ${idx + 1} - Album lulusan 2025`;
+        img.loading = "lazy";
+
+        const cornerTL = document.createElement('div');
+        cornerTL.className = 'photo-corner corner-tl';
+        const cornerTR = document.createElement('div');
+        cornerTR.className = 'photo-corner corner-tr';
+        const cornerBL = document.createElement('div');
+        cornerBL.className = 'photo-corner corner-bl';
+        const cornerBR = document.createElement('div');
+        cornerBR.className = 'photo-corner corner-br';
+
+        frameWrap.appendChild(cornerTL);
+        frameWrap.appendChild(cornerTR);
+        frameWrap.appendChild(cornerBL);
+        frameWrap.appendChild(cornerBR);
+
+        frameWrap.appendChild(img);
+
+        slide.appendChild(frameWrap);
+        slidesEl.appendChild(slide);
+      });
+    }
+
+    const leak = document.getElementById('leak');
+    const endcard = document.getElementById('endcard');
+
+    let idx = 0; 
+    let timer = null; 
+    let ended = false;
+
+    function activate(i) {
+      document.querySelectorAll('.slide').forEach((s, si) => {
+        const frame = s.querySelector('.frame');
+        s.classList.toggle('active', si === i);
+        
+        if (si === i) {
+          frame.style.setProperty('--rot', `${rand(-3, 3).toFixed(2)}deg`);
+          frame.style.setProperty('--offsetX', `${rand(-22, 22).toFixed(0)}px`);
+          frame.style.setProperty('--offsetY', `${rand(-14, 14).toFixed(0)}px`);
+          frame.style.setProperty('--tape', pick(TAPE_COLORS));
+          frame.style.setProperty('--tape-rot', `${rand(-6, 6).toFixed(2)}deg`);
+
+          const t = pick(TRANSITIONS);
+          frame.classList.remove(...TRANSITIONS);
+          void frame.offsetWidth; 
+          frame.classList.add(t);
+
+          leak.style.opacity = Math.random() < 0.55 ? 1 : 0;
+          setTimeout(() => leak.style.opacity = 0, 900);
+        }
+      });
+    }
+
+    function next() {
+      if (ended) return;
+      idx++;
+      if (idx >= photos.length) {
+        showEndcard(); 
+        return;
+      }
+      activate(idx);
+    }
+
+    function prev() {
+      if (ended) { 
+        hideEndcard(); 
+      }
+      idx = (idx - 1 + photos.length) % photos.length; 
+      activate(idx);
+    }
+
+    function play() { 
+      clearInterval(timer); 
+      timer = setInterval(next, 5200); 
+    }
+    
+    function pause() { 
+      clearInterval(timer); 
+    }
+
+    function showEndcard() {
+      ended = true; 
+      pause();
+      endcard.classList.add('show');
+      fadeAudio(1.0, 0.25, 900);
+    }
+    
+    function hideEndcard() { 
+      ended = false; 
+      endcard.classList.remove('show'); 
+      play(); 
+      fadeAudio(0.25, 1.0, 600);
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', next);
+    document.getElementById('prevBtn').addEventListener('click', prev);
+
+    document.getElementById('muteBtn').addEventListener('click', () => {
+      const audio = document.getElementById('bgm');
+      const muteBtn = document.getElementById('muteBtn');
+      
+      if (isMuted) {
+        audio.volume = 0.5;
+        muteBtn.innerHTML = '🔊';
+        isMuted = false;
+      } else {
+        audio.volume = 0;
+        muteBtn.innerHTML = '🔇';
+        isMuted = true;
+      }
+    });
+
+    const audio = document.getElementById('bgm');
+    let audioStarted = false;
+    
+    function startAudio() { 
+      if (!audioStarted) { 
+        audioStarted = true; 
+        audio.volume = 0.5; 
+        audio.play().catch(e => console.log('Audio play failed:', e)); 
+      }
+    }
+    
+    document.addEventListener('click', startAudio, { once: true });
+
+    function fadeAudio(from, to, ms) {
+      const steps = 18; 
+      const stepTime = ms / steps; 
+      let cur = from; 
+      const delta = (to - from) / steps;
+      
+      let i = 0; 
+      const iv = setInterval(() => {
+        i++; 
+        cur += delta; 
+        if (!isMuted) {
+          audio.volume = Math.max(0, Math.min(1, cur)); 
+        }
+        if (i >= steps) clearInterval(iv); 
+      }, stepTime);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') next();
+      if (e.key === 'ArrowLeft') prev();
+      if (e.key === ' ') { 
+        if (timer) pause(); 
+        else play(); 
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', preloadImages);
+
+    setTimeout(() => {
+      play();
+    }, 2000);
+  </script>
+</body>
+</html>
